@@ -105,3 +105,39 @@ history = model.fit(x_train, y_train,
 # compile the model
 model_latent = Model(input_layer, latent_view)
 model_latent.compile(optimizer='adam', loss='mse')
+
+plt.plot(history['loss'], linewidth=2, label='Train')
+plt.plot(history['val_loss'], linewidth=2, label='Test')
+plt.legend(loc='upper right')
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+#plt.ylim(ymin=0.70,ymax=1)
+plt.show()
+
+n = np.random.randint(0,len(y_test))
+preds = model_latent.predict(y_test)
+pred = model.predict(y_test)
+
+plt.figure(figsize=(20, 4))
+for i in range(5):
+    # Display original
+    ax = plt.subplot(3, 5, i + 1)
+    plt.imshow(x_test[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display latent space
+    ax = plt.subplot(3,5, i+1+5)
+    plt.imshow(preds[i, :, :, i])
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display reconstruction
+    ax = plt.subplot(3, 5, i + 1 + 5+5)
+    plt.imshow(pred[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+plt.show()
