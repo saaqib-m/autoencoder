@@ -95,7 +95,7 @@ output_layer = Conv2DTranspose(1,(3,3), padding ='same')(x)
 
 model = Model(input_layer, output_layer)
 model.compile(optimizer='adam', loss='mse')
-model.summary()
+# model.summary()
 
 history = model.fit(x_train, y_train,
                 epochs=50,
@@ -119,25 +119,39 @@ n = np.random.randint(0,len(y_test))
 preds = model_latent.predict(y_test)
 pred = model.predict(y_test)
 
-plt.figure(figsize=(20, 4))
+xtestdata = []
+latentspacedata = []
+preddata = []
 for i in range(5):
-    # Display original
-    ax = plt.subplot(3, 5, i + 1)
-    plt.imshow(x_test[i].reshape(256,256))
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    xtestdata.append(x_test[i])
+    latentspacedata.append(preds[i, :, :, i])
+    preddata.append(pred[i])
+
+xtestdata
+latentspacedata
+preddata
+
+# This is to use the arrays above to plot the reconstructions
+
+# plt.figure(figsize=(20, 4))
+# for i in range(5):
+#     # Display original
+#     ax = plt.subplot(3, 5, i + 1)
+#     plt.imshow(xtestdata[i].reshape(256,256))
+#     plt.gray()
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
     
-    # Display latent space
-    ax = plt.subplot(3,5, i+1+5)
-    plt.imshow(preds[i, :, :, i])
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+#     # Display latent space
+#     ax = plt.subplot(3,5, i+1+5)
+#     plt.imshow(latentspacedata[i])
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
     
-    # Display reconstruction
-    ax = plt.subplot(3, 5, i + 1 + 5+5)
-    plt.imshow(pred[i].reshape(256,256))
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-plt.show()
+#     # Display reconstruction
+#     ax = plt.subplot(3, 5, i + 1 + 5+5)
+#     plt.imshow(preddata[i].reshape(256,256))
+#     plt.gray()
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
+# plt.show()
