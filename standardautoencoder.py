@@ -12,7 +12,9 @@ from tensorflow.keras.losses import mse, binary_crossentropy
 import skimage as sk
 from skimage.io import imread
 import matplotlib.pyplot as plt
+import sys
 import numpy as np
+np.set_printoptions(threshold=sys.maxsize)
 from sklearn.model_selection import train_test_split
 import zipfile
 import os
@@ -113,7 +115,7 @@ plt.title('Model loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 #plt.ylim(ymin=0.70,ymax=1)
-plt.show()
+#plt.show()
 
 n = np.random.randint(0,len(y_test))
 preds = model_latent.predict(y_test)
@@ -127,9 +129,9 @@ for i in range(5):
     latentspacedata.append(preds[i, :, :, i])
     preddata.append(pred[i])
 
-xtestdata
-latentspacedata
-preddata
+print('xtestdata=',xtestdata)
+print('latentspacedata=',latentspacedata)
+print('preddata=',preddata)
 
 # This is to use the arrays above to plot the reconstructions
 
