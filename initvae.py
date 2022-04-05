@@ -47,7 +47,7 @@ x = []
 y = []
 for file_path in img_path:
     input = get_input(file_path)
-    input = cv2.resize(input, (256,256))
+    input = cv2.resize(input,(2848,2136))
     input = sk.color.rgb2gray(input)
     input = preprocess_input(input)
     x.append(input)
@@ -56,18 +56,11 @@ x = np.array(x)
 y = np.array(y)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y)
-x_train = x_train.reshape(-1,256,256,1)
-x_test = x_test.reshape(-1,256,256,1)
-y_train = x_train.reshape(-1,256,256,1)
-y_test = x_test.reshape(-1,256,256,1)
+x_train = x_train.reshape(-1,2136,2848,1)
+x_test = x_test.reshape(-1,2136,2848,1)
+y_train = x_train.reshape(-1,2136,2848,1)
+y_test = x_test.reshape(-1,2136,2848,1)
 
-b_size = 128
-n_size = 512
-def sampling(args):
-    z_mean, z_log_sigma = args
-    epsilon = K.random_normal(shape = (n_size,) , mean = 0, stddev = 1)
-    return z_mean + K.exp(z_log_sigma/2) * epsilon
-  
 b_size = 128
 n_size = 512
 def sampling(args):
@@ -90,16 +83,16 @@ def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 32):
     x = MaxPooling2D((2,2), padding ='same')(x)
     x = Conv2D(256,(3,3), activation = 'relu', padding = 'same')(x)
     x = BatchNormalization()(x)
-    x = MaxPooling2D((2,2), padding ='same')(x)
+    latent_view = MaxPooling2D((2,2), padding ='same')(x)
     
     # Latent Variable Calculation
-    shape = K.int_shape(x)
+    shape = K.int_shape(latent_view)
     
-    flatten_1 = Flatten()(x)
+    flatten_1 = Flatten()(latent_view)
     dense_1 = Dense(bottleneck_size, name='z_mean')(flatten_1)
     z_mean = BatchNormalization()(dense_1)
 
-    flatten_2 = Flatten()(x)
+    flatten_2 = Flatten()(latent_view)
     dense_2 = Dense(bottleneck_size, name ='z_log_sigma')(flatten_2)
     z_log_sigma = BatchNormalization()(dense_2)
 
@@ -126,18 +119,18 @@ def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 32):
     x = Conv2DTranspose(32,(3,3), activation = 'relu', padding = 'same')(x)
     x = BatchNormalization()(x)
     output = Conv2DTranspose(1,(3,3), activation = 'tanh', padding ='same')(x)
+
     decoder = Model(latent_input, output, name = 'decoder')
 
     output_2 = decoder(encoder(inputt)[2])
     vae = Model(inputt, output_2, name ='vae')
-    output_latent = encoder(inputt)[2]
-    vae_latent = Model(inputt, output_latent, name ='vae')
-    return vae,vae_latent, encoder, decoder, z_mean, z_log_sigma
+
+    vae_latent = Model(inputt, latent_view, name ='vae_latent')
+    return vae, vae_latent, encoder, decoder, z_mean, z_log_sigma, z
 
 
 
-
-vae_2, vae_latent, encoder, decoder, z_mean, z_log_sigma = build_conv_vae((256,256,1), n_size, sampling, batch_size = b_size)
+vae_2, vae_latent, encoder, decoder, z_mean, z_log_sigma, z = build_conv_vae((2136,2848,1), n_size, sampling, batch_size = b_size)
 
 def vae_loss(input_img, output):
     # Compute error in reconstruction
@@ -156,33 +149,42 @@ encoder.compile(optimizer = 'rmsprop', loss = vae_loss)
 decoder.compile(optimizer = 'rmsprop', loss = vae_loss)
 
 history = vae_2.fit(x_train, y_train,
-                epochs=5,
+                epochs=50,
                 batch_size=128,
                 validation_data=(x_test, y_test)).history
 
-# plt.plot(history['loss'], linewidth=2, label='Train')
-# plt.plot(history['val_loss'], linewidth=2, label='Test')
-# plt.legend(loc='upper right')
-# plt.title('Model loss')
-# plt.ylabel('Loss')
-# plt.xlabel('Epoch')
-# #plt.ylim(ymin=0.70,ymax=1)
-# plt.show()
-
+plt.plot(history['loss'], linewidth=2, label='Train')
+plt.plot(history['val_loss'], linewidth=2, label='Test')
+plt.legend(loc='upper right')
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.savefig('vae_losses.png')
 
 
 n = np.random.randint(0,len(y_test))
 preds = vae_latent.predict(y_test)
 pred = vae_2.predict(y_test)
 
-xtestdata = []
-latentspacedata = []
-preddata = []
-for i in range(5):
-    xtestdata.append(x_test[i])
-    latentspacedata.append(preds[i])
-    preddata.append(pred[i])
-
-print('xtestdata=',xtestdata)
-print('latentspacedata=',latentspacedata)
-print('preddata=',preddata)
+plt.figure(figsize=(20, 4))
+for i in range(3):
+    # Display original
+    ax = plt.subplot(3, 5, i + 1)
+    plt.imshow(x_test[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display latent space
+    ax = plt.subplot(3,5, i+1+5)
+    plt.imshow(preds[i, :, :, i])
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display reconstruction
+    ax = plt.subplot(3, 5, i + 1 + 5+5)
+    plt.imshow(pred[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+plt.savefig('vae_recon.png')
