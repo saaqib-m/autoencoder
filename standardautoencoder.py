@@ -116,44 +116,34 @@ plt.ylabel('Loss')
 plt.xlabel('Epoch')
 #plt.ylim(ymin=0.70,ymax=1)
 #plt.show()
+plt.savefig('standard_ae_losses.png')
+
+
 
 n = np.random.randint(0,len(y_test))
 preds = model_latent.predict(y_test)
 pred = model.predict(y_test)
 
-xtestdata = []
-latentspacedata = []
-preddata = []
+plt.figure(figsize=(20, 4))
 for i in range(5):
-    xtestdata.append(x_test[i])
-    latentspacedata.append(preds[i, :, :, i])
-    preddata.append(pred[i])
-
-print('xtestdata=',xtestdata)
-print('latentspacedata=',latentspacedata)
-print('preddata=',preddata)
-
-# This is to use the arrays above to plot the reconstructions
-
-# plt.figure(figsize=(20, 4))
-# for i in range(5):
-#     # Display original
-#     ax = plt.subplot(3, 5, i + 1)
-#     plt.imshow(xtestdata[i].reshape(256,256))
-#     plt.gray()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
+    # Display original
+    ax = plt.subplot(3, 5, i + 1)
+    plt.imshow(x_test[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
     
-#     # Display latent space
-#     ax = plt.subplot(3,5, i+1+5)
-#     plt.imshow(latentspacedata[i])
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
+    # Display latent space
+    ax = plt.subplot(3,5, i+1+5)
+    plt.imshow(preds[i, :, :, i])
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
     
-#     # Display reconstruction
-#     ax = plt.subplot(3, 5, i + 1 + 5+5)
-#     plt.imshow(preddata[i].reshape(256,256))
-#     plt.gray()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
+    # Display reconstruction
+    ax = plt.subplot(3, 5, i + 1 + 5+5)
+    plt.imshow(pred[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 # plt.show()
+plt.savefig('standard_ae_recon.png')
