@@ -47,7 +47,7 @@ x = []
 y = []
 for file_path in img_path:
     input = get_input(file_path)
-    input = cv2.resize(input,(2848,2136))
+    input = cv2.resize(input,(1536,1024))
     input = sk.color.rgb2gray(input)
     input = preprocess_input(input)
     x.append(input)
@@ -56,19 +56,19 @@ x = np.array(x)
 y = np.array(y)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y)
-x_train = x_train.reshape(-1,2136,2848,1)
-x_test = x_test.reshape(-1,2136,2848,1)
-y_train = x_train.reshape(-1,2136,2848,1)
-y_test = x_test.reshape(-1,2136,2848,1)
+x_train = x_train.reshape(-1,1024,1536,1)
+x_test = x_test.reshape(-1,1024,1536,1)
+y_train = x_train.reshape(-1,1024,1536,1)
+y_test = x_test.reshape(-1,1024,1536,1)
 
-b_size = 128
+b_size = 4
 n_size = 512
 def sampling(args):
     z_mean, z_log_sigma = args
     epsilon = K.random_normal(shape = (n_size,) , mean = 0, stddev = 1)
     return z_mean + K.exp(z_log_sigma/2) * epsilon
   
-def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 32):
+def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 4):
     
     # ENCODER
     inputt = Input(shape=(input_shape[0],input_shape[1],input_shape[2]))
@@ -130,7 +130,7 @@ def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 32):
 
 
 
-vae_2, vae_latent, encoder, decoder, z_mean, z_log_sigma, z = build_conv_vae((2136,2848,1), n_size, sampling, batch_size = b_size)
+vae_2, vae_latent, encoder, decoder, z_mean, z_log_sigma, z = build_conv_vae((1024,1536,1), n_size, sampling, batch_size = b_size)
 
 def vae_loss(input_img, output):
     # Compute error in reconstruction
@@ -150,7 +150,7 @@ decoder.compile(optimizer = 'rmsprop', loss = vae_loss)
 
 history = vae_2.fit(x_train, y_train,
                 epochs=50,
-                batch_size=128,
+                batch_size=4,
                 validation_data=(x_test, y_test)).history
 
 plt.plot(history['loss'], linewidth=2, label='Train')
@@ -167,10 +167,10 @@ preds = vae_latent.predict(y_test)
 pred = vae_2.predict(y_test)
 
 plt.figure(figsize=(20, 4))
-for i in range(3):
+for i in range(5):
     # Display original
     ax = plt.subplot(3, 5, i + 1)
-    plt.imshow(x_test[i].reshape(256,256))
+    plt.imshow(x_test[i].reshape(1536,1024))
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -183,7 +183,7 @@ for i in range(3):
     
     # Display reconstruction
     ax = plt.subplot(3, 5, i + 1 + 5+5)
-    plt.imshow(pred[i].reshape(256,256))
+    plt.imshow(pred[i].reshape(1536,1024))
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
