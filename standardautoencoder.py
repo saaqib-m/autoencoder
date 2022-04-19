@@ -46,7 +46,7 @@ x = []
 y = []
 for file_path in img_path:
     input = get_input(file_path)
-    input = cv2.resize(input, (256,256))
+    input = cv2.resize(input,(1536,1024))
     input = sk.color.rgb2gray(input)
     input = preprocess_input(input)
     x.append(input)
@@ -55,13 +55,13 @@ x = np.array(x)
 y = np.array(y)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y)
+x_train = x_train.reshape(-1,1024,1536,1)
+x_test = x_test.reshape(-1,1024,1536,1)
+y_train = x_train.reshape(-1,1024,1536,1)
+y_test = x_test.reshape(-1,1024,1536,1)
 
-x_train = x_train.reshape(-1,256,256,1)
-x_test = x_test.reshape(-1,256,256,1)
-y_train = y_train.reshape(-1,256,256,1)
-y_test = y_test.reshape(-1,256,256,1)
 
-input_layer = Input(shape=(256,256,1))
+input_layer = Input(shape=(1024,1536,1))
 
 x = Conv2D(32,(3,3),activation = 'relu', padding = 'same')(input_layer)    
 x = BatchNormalization()(x)
@@ -97,30 +97,46 @@ output_layer = Conv2DTranspose(1,(3,3), padding ='same')(x)
 
 model = Model(input_layer, output_layer)
 model.compile(optimizer='adam', loss='mse')
-# model.summary()
+
+model1 = Model(input_layer, output_layer)
+model1.compile(optimizer='adam', loss='binary_crossentropy')
 
 history = model.fit(x_train, y_train,
-                epochs=50,
-                batch_size=128,
+                epochs=25,
+                batch_size=8,
                 validation_data=(x_test, y_test)).history
 
-# compile the model
+history1 = model1.fit(x_train, y_train,
+                epochs=25,
+                batch_size=8,
+                validation_data=(x_test, y_test)).history
+
+
+# compile the latent model
 model_latent = Model(input_layer, latent_view)
 model_latent.compile(optimizer='adam', loss='mse')
+
+model_latent1 = Model(input_layer, latent_view)
+model_latent1.compile(optimizer='adam', loss='binary_crossentropy')
+
 
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
 plt.legend(loc='upper right')
-plt.title('Model loss')
+plt.title('Model Mean Squared Error Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-#plt.ylim(ymin=0.70,ymax=1)
-#plt.show()
-plt.savefig('standard_ae_losses.png')
+plt.savefig('standard_ae_losses_mse.png')
+
+plt.plot(history1['loss'], linewidth=2, label='Train')
+plt.plot(history1['val_loss'], linewidth=2, label='Test')
+plt.legend(loc='upper right')
+plt.title('Model Binary Cross Entropy Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.savefig('standard_ae_losses_bce.png')
 
 
-
-n = np.random.randint(0,len(y_test))
 preds = model_latent.predict(y_test)
 pred = model.predict(y_test)
 
@@ -128,7 +144,7 @@ plt.figure(figsize=(20, 4))
 for i in range(5):
     # Display original
     ax = plt.subplot(3, 5, i + 1)
-    plt.imshow(x_test[i].reshape(256,256))
+    plt.imshow(x_test[i].reshape(1536,1024))
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -141,9 +157,36 @@ for i in range(5):
     
     # Display reconstruction
     ax = plt.subplot(3, 5, i + 1 + 5+5)
-    plt.imshow(pred[i].reshape(256,256))
+    plt.imshow(pred[i].reshape(1536,1024))
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 # plt.show()
-plt.savefig('standard_ae_recon.png')
+plt.savefig('standard_ae_recon_mse.png')
+
+preds1 = model_latent1.predict(y_test)
+pred1 = model1.predict(y_test)
+
+plt.figure(figsize=(20, 4))
+for i in range(5):
+    # Display original
+    ax = plt.subplot(3, 5, i + 1)
+    plt.imshow(x_test[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display latent space
+    ax = plt.subplot(3,5, i+1+5)
+    plt.imshow(preds1[i, :, :, i])
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # Display reconstruction
+    ax = plt.subplot(3, 5, i + 1 + 5+5)
+    plt.imshow(pred1[i].reshape(256,256))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+# plt.show()
+plt.savefig('standard_ae_recon_bce.png')
