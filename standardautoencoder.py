@@ -9,8 +9,7 @@ from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras import backend as K
 # from keras import backend as objectives
 from tensorflow.keras.losses import mse, binary_crossentropy
-import skimage as sk
-from skimage.io import imread
+from skimage import io 
 import matplotlib.pyplot as plt
 import sys
 import numpy as np
@@ -21,8 +20,6 @@ import os
 from pathlib import Path
 import cv2 as cv2
 from tensorflow.python.framework.ops import disable_eager_execution
-# from PIL import ImageFile
-# ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 # file_path = r"C:\Users\Saaqib\Documents\Imperial\Research Project\SWET_data"
@@ -35,33 +32,29 @@ for root, directories, files in os.walk(file_path, topdown=False):
 
 def get_input(path):
     """get specific image from path"""
-    img = imread(path)
+    img = cv2.imread(path)
     return img
-
-def preprocess_input(img):
-    # convert between 0 and 1
-    return img.astype('float32')
 
 x = []
 y = []
-for file_path in img_path:
+for file_path in img_path[0:50]:
     input = get_input(file_path)
-    input = cv2.resize(input,(1536,1024))
-    input = sk.color.rgb2gray(input)
-    input = preprocess_input(input)
+    input = cv2.resize(input,(1424,1024))
+    input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
+    input.astype('float32') / 255.0 - 0.5
     x.append(input)
     y.append(input)
 x = np.array(x)
 y = np.array(y)
 
-x_train, x_test, y_train, y_test = train_test_split(x, y)
-x_train = x_train.reshape(-1,1024,1536,1)
-x_test = x_test.reshape(-1,1024,1536,1)
-y_train = x_train.reshape(-1,1024,1536,1)
-y_test = x_test.reshape(-1,1024,1536,1)
 
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+x_train = x_train.reshape(-1,1024,1424,1)
+x_test = x_test.reshape(-1,1024,1424,1)
+y_train = x_train.reshape(-1,1024,1424,1)
+y_test = x_test.reshape(-1,1024,1424,1)
 
-input_layer = Input(shape=(1024,1536,1))
+input_layer = Input(shape=(1024,1424,1))
 
 x = Conv2D(32,(3,3),activation = 'relu', padding = 'same')(input_layer)    
 x = BatchNormalization()(x)
@@ -69,20 +62,20 @@ x = MaxPooling2D((2,2), padding ='same')(x)
 x = Conv2D(64,(3,3),activation = 'relu', padding = 'same')(x)
 x = BatchNormalization()(x)
 x = MaxPooling2D((2,2), padding ='same')(x)
-x = Conv2D(128,(3,3), activation = 'relu', padding = 'same')(x)
+x = Conv2D(64,(3,3), activation = 'relu', padding = 'same')(x)
 x = BatchNormalization()(x)
 x = MaxPooling2D((2,2), padding ='same')(x)
-x = Conv2D(256,(3,3), activation = 'relu', padding = 'same')(x)
+x = Conv2D(128,(3,3), activation = 'relu', padding = 'same')(x)
 x = BatchNormalization()(x)
 latent_view = MaxPooling2D((2,2), padding ='same')(x)
 
 # decoding architecture
 
-x = Conv2DTranspose(256,(3,3), activation = 'relu', padding = 'same')(latent_view)
+x = Conv2DTranspose(128,(3,3), activation = 'relu', padding = 'same')(latent_view)
 x = BatchNormalization()(x)
 x = UpSampling2D((2,2))(x)
 # x = Cropping2D([[0,1],[0,1]])(x)
-x = Conv2DTranspose(128,(3,3), activation = 'relu', padding = 'same')(x)
+x = Conv2DTranspose(64,(3,3), activation = 'relu', padding = 'same')(x)
 x = BatchNormalization()(x)
 x = UpSampling2D((2,2))(x)
 # x = Cropping2D([[0,1],[0,1]])(x)
@@ -98,17 +91,9 @@ output_layer = Conv2DTranspose(1,(3,3), padding ='same')(x)
 model = Model(input_layer, output_layer)
 model.compile(optimizer='adam', loss='mse')
 
-model1 = Model(input_layer, output_layer)
-model1.compile(optimizer='adam', loss='binary_crossentropy')
-
 history = model.fit(x_train, y_train,
-                epochs=25,
-                batch_size=8,
-                validation_data=(x_test, y_test)).history
-
-history1 = model1.fit(x_train, y_train,
-                epochs=25,
-                batch_size=8,
+                epochs=30,
+                batch_size=16,
                 validation_data=(x_test, y_test)).history
 
 
@@ -116,36 +101,25 @@ history1 = model1.fit(x_train, y_train,
 model_latent = Model(input_layer, latent_view)
 model_latent.compile(optimizer='adam', loss='mse')
 
-model_latent1 = Model(input_layer, latent_view)
-model_latent1.compile(optimizer='adam', loss='binary_crossentropy')
-
-
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
 plt.legend(loc='upper right')
 plt.title('Model Mean Squared Error Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_mse.png')
-
-plt.plot(history1['loss'], linewidth=2, label='Train')
-plt.plot(history1['val_loss'], linewidth=2, label='Test')
-plt.legend(loc='upper right')
-plt.title('Model Binary Cross Entropy Loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_bce.png')
+plt.savefig('standard_ae_losses_mse3.png')
+# plt.savefig('testerror.png')
 
 
 preds = model_latent.predict(y_test)
 pred = model.predict(y_test)
 
-plt.figure(figsize=(20, 4))
+plt.figure(figsize=(20, 10))
 for i in range(5):
     # Display original
     ax = plt.subplot(3, 5, i + 1)
-    plt.imshow(x_test[i].reshape(1536,1024))
-    plt.gray()
+    # plt.imshow(x_test[i].reshape(1024,1424,3))
+    plt.imshow(x_test[i])
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     
@@ -157,36 +131,59 @@ for i in range(5):
     
     # Display reconstruction
     ax = plt.subplot(3, 5, i + 1 + 5+5)
-    plt.imshow(pred[i].reshape(1536,1024))
-    plt.gray()
+    # plt.imshow(pred[i].reshape(1024,1424,3))
+    plt.imshow(pred[i])
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-# plt.show()
-plt.savefig('standard_ae_recon_mse.png')
 
-preds1 = model_latent1.predict(y_test)
-pred1 = model1.predict(y_test)
+plt.savefig('standard_ae_recon_mse3.png')
+# plt.savefig('testrecon.png')
 
-plt.figure(figsize=(20, 4))
-for i in range(5):
-    # Display original
-    ax = plt.subplot(3, 5, i + 1)
-    plt.imshow(x_test[i].reshape(256,256))
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+
+
+# model1 = Model(input_layer, output_layer)
+# model1.compile(optimizer='adam', loss='binary_crossentropy')
+
+# history1 = model1.fit(x_train, y_train,
+#                 epochs=25,
+#                 batch_size=8,
+#                 validation_data=(x_test, y_test)).history
+
+                
+# plt.plot(history1['loss'], linewidth=2, label='Train')
+# plt.plot(history1['val_loss'], linewidth=2, label='Test')
+# plt.legend(loc='upper right')
+# plt.title('Model Binary Cross Entropy Loss')
+# plt.ylabel('Loss')
+# plt.xlabel('Epoch')
+# plt.savefig('standard_ae_losses_bce.png')
+
+# model_latent1 = Model(input_layer, latent_view)
+# model_latent1.compile(optimizer='adam', loss='binary_crossentropy')
+
+# preds1 = model_latent1.predict(y_test)
+# pred1 = model1.predict(y_test)
+
+# plt.figure(figsize=(20, 10))
+# for i in range(5):
+#     # Display original
+#     ax = plt.subplot(3, 5, i + 1)
+#     plt.imshow(x_test[i].reshape(256,256))
+#     plt.gray()
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
     
-    # Display latent space
-    ax = plt.subplot(3,5, i+1+5)
-    plt.imshow(preds1[i, :, :, i])
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+#     # Display latent space
+#     ax = plt.subplot(3,5, i+1+5)
+#     plt.imshow(preds1[i, :, :, i])
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
     
-    # Display reconstruction
-    ax = plt.subplot(3, 5, i + 1 + 5+5)
-    plt.imshow(pred1[i].reshape(256,256))
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-# plt.show()
-plt.savefig('standard_ae_recon_bce.png')
+#     # Display reconstruction
+#     ax = plt.subplot(3, 5, i + 1 + 5+5)
+#     plt.imshow(pred1[i].reshape(256,256))
+#     plt.gray()
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
+# # plt.show()
+# plt.savefig('standard_ae_recon_bce.png')
