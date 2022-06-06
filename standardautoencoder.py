@@ -37,24 +37,24 @@ def get_input(path):
 
 x = []
 y = []
-for file_path in img_path[0:50]:
-    input = get_input(file_path)
-    input = cv2.resize(input,(1424,1024))
-    input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
-    input.astype('float32') / 255.0 - 0.5
-    x.append(input)
-    y.append(input)
+for file_path in img_path:
+    inputs = get_input(file_path)
+    inputs = cv2.resize(inputs,(768,512))
+    # inputs = cv2.cvtColor(inputs, cv2.COLOR_RGB2BGR)
+    # input.astype('float32') / 255.0 - 0.5
+    x.append(inputs)
+    y.append(inputs)
 x = np.array(x)
 y = np.array(y)
 
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-x_train = x_train.reshape(-1,1024,1424,1)
-x_test = x_test.reshape(-1,1024,1424,1)
-y_train = x_train.reshape(-1,1024,1424,1)
-y_test = x_test.reshape(-1,1024,1424,1)
+x_train = x_train.reshape(-1,512,768,3)
+x_test = x_test.reshape(-1,512,768,3)
+y_train = x_train.reshape(-1,512,768,3)
+y_test = x_test.reshape(-1,512,768,3)
 
-input_layer = Input(shape=(1024,1424,1))
+input_layer = Input(shape=(512,768,3))
 
 x = Conv2D(32,(3,3),activation = 'relu', padding = 'same')(input_layer)    
 x = BatchNormalization()(x)
@@ -85,21 +85,17 @@ x = UpSampling2D((2,2))(x)
 x = Conv2DTranspose(32,(3,3), activation = 'relu', padding = 'same')(x)
 x = BatchNormalization()(x)
 x = UpSampling2D((2,2))(x)
-output_layer = Conv2DTranspose(1,(3,3), padding ='same')(x)
+output_layer = Conv2DTranspose(3,(3,3), padding ='same')(x)
 
 
 model = Model(input_layer, output_layer)
 model.compile(optimizer='adam', loss='mse')
 
 history = model.fit(x_train, y_train,
-                epochs=30,
+                epochs=50,
                 batch_size=16,
                 validation_data=(x_test, y_test)).history
 
-
-# compile the latent model
-model_latent = Model(input_layer, latent_view)
-model_latent.compile(optimizer='adam', loss='mse')
 
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
@@ -107,9 +103,13 @@ plt.legend(loc='upper right')
 plt.title('Model Mean Squared Error Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_mse3.png')
+plt.savefig('standard_ae_losses_mse7.png')
 # plt.savefig('testerror.png')
 
+
+# compile the latent model
+model_latent = Model(input_layer, latent_view)
+model_latent.compile(optimizer='adam', loss='mse')
 
 preds = model_latent.predict(y_test)
 pred = model.predict(y_test)
@@ -118,72 +118,26 @@ plt.figure(figsize=(20, 10))
 for i in range(5):
     # Display original
     ax = plt.subplot(3, 5, i + 1)
-    # plt.imshow(x_test[i].reshape(1024,1424,3))
-    plt.imshow(x_test[i])
+    plt.imshow(cv2.cvtColor(x_test[i].astype('uint8'), cv2.COLOR_BGR2RGB))
+    # plt.imshow(x_test[i])
+    # plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     
     # Display latent space
     ax = plt.subplot(3,5, i+1+5)
-    plt.imshow(preds[i, :, :, i])
+    plt.imshow(cv2.cvtColor(preds[i,:,:,i].astype('uint8'), cv2.COLOR_BGR2RGB))
+    # plt.imshow(preds[i,:,:,i].astype('uint8'))
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     
     # Display reconstruction
     ax = plt.subplot(3, 5, i + 1 + 5+5)
-    # plt.imshow(pred[i].reshape(1024,1424,3))
-    plt.imshow(pred[i])
+    plt.imshow(cv2.cvtColor(pred[i].astype('uint8'), cv2.COLOR_BGR2RGB))
+    # plt.imshow(pred[i].astype('uint8'))
+    # plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-plt.savefig('standard_ae_recon_mse3.png')
+plt.savefig('standard_ae_recon_mse7.png')
 # plt.savefig('testrecon.png')
-
-
-
-# model1 = Model(input_layer, output_layer)
-# model1.compile(optimizer='adam', loss='binary_crossentropy')
-
-# history1 = model1.fit(x_train, y_train,
-#                 epochs=25,
-#                 batch_size=8,
-#                 validation_data=(x_test, y_test)).history
-
-                
-# plt.plot(history1['loss'], linewidth=2, label='Train')
-# plt.plot(history1['val_loss'], linewidth=2, label='Test')
-# plt.legend(loc='upper right')
-# plt.title('Model Binary Cross Entropy Loss')
-# plt.ylabel('Loss')
-# plt.xlabel('Epoch')
-# plt.savefig('standard_ae_losses_bce.png')
-
-# model_latent1 = Model(input_layer, latent_view)
-# model_latent1.compile(optimizer='adam', loss='binary_crossentropy')
-
-# preds1 = model_latent1.predict(y_test)
-# pred1 = model1.predict(y_test)
-
-# plt.figure(figsize=(20, 10))
-# for i in range(5):
-#     # Display original
-#     ax = plt.subplot(3, 5, i + 1)
-#     plt.imshow(x_test[i].reshape(256,256))
-#     plt.gray()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-    
-#     # Display latent space
-#     ax = plt.subplot(3,5, i+1+5)
-#     plt.imshow(preds1[i, :, :, i])
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-    
-#     # Display reconstruction
-#     ax = plt.subplot(3, 5, i + 1 + 5+5)
-#     plt.imshow(pred1[i].reshape(256,256))
-#     plt.gray()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-# # plt.show()
-# plt.savefig('standard_ae_recon_bce.png')
