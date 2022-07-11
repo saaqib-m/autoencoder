@@ -9,21 +9,24 @@ from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras import backend as K
 # from keras import backend as objectives
 from tensorflow.keras.losses import mse, binary_crossentropy
-from skimage import io 
+import skimage as sk
+from skimage.io import imread
 import matplotlib.pyplot as plt
-import sys
 import numpy as np
-np.set_printoptions(threshold=sys.maxsize)
+from skimage import io 
 from sklearn.model_selection import train_test_split
 import zipfile
 import os
 from pathlib import Path
 import cv2 as cv2
 from tensorflow.python.framework.ops import disable_eager_execution
-from PIL import Image
+from PIL import Image 
 import pandas as pd
+# from PIL import ImageFile
+# ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# file_path = r"C:\Users\Saaqib\Documents\Imperial\Research Project\SWET_data"
+disable_eager_execution()
+
 file_path = r"/rds/general/user/sim21/home/SWET_data"
 img_path = []
 files = os.listdir(file_path)
@@ -45,13 +48,12 @@ difference_1 = set(file_name).difference(set(ref))
 difference_2 = set(ref).difference(set(file_name))
 
 list_difference = list(difference_1.union(difference_2))
-print('dif=', list_difference)
+
 # Remove those images not in df from img_path (5 images)
 #?????? Do i need this
 
 for i in list_difference:
     a = i.split("_")
-    # print('a=', a)
     removal_imgs = "/rds/general/user/sim21/home/SWET_data/" + a[0] + "/" + a[1] + "_" + a[2]
     img_path.remove(removal_imgs)
 
@@ -115,49 +117,94 @@ test_set = np.array(test_set)
 # y_train = x_train.reshape(-1,512,768,3)
 # y_test = x_test.reshape(-1,512,768,3)
 
-input_layer = Input(shape=(512,768,3))
+b_size = 16
+n_size = 128
+def sampling(args):
+    z_mean, z_log_sigma = args
+    epsilon = K.random_normal(shape = (n_size,) , mean = 0, stddev = 1)
+    return z_mean + K.exp(z_log_sigma/2) * epsilon
+  
+def build_conv_vae(input_shape, bottleneck_size, sampling, batch_size = 16):
+    
+    # ENCODER
+    inputt = Input(shape=(input_shape[0],input_shape[1],input_shape[2]))
+    x = Conv2D(32,(3,3),activation = 'relu', padding = 'same')(inputt)    
+    x = BatchNormalization()(x)
+    x = MaxPooling2D((2,2), padding ='same')(x)
+    x = Conv2D(64,(3,3),activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    x = MaxPooling2D((2,2), padding ='same')(x)
+    x = Conv2D(128,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    x = MaxPooling2D((2,2), padding ='same')(x)
+    x = Conv2D(256,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    latent_view = MaxPooling2D((2,2), padding ='same')(x)
+    
+    # Latent Variable Calculation
+    shape = K.int_shape(latent_view)
+    
+    flatten_1 = Flatten()(latent_view)
+    dense_1 = Dense(bottleneck_size, name='z_mean')(flatten_1)
+    z_mean = BatchNormalization()(dense_1)
 
-x = Conv2D(32,(3,3),activation = 'relu', padding = 'same')(input_layer)    
-x = BatchNormalization()(x)
-x = MaxPooling2D((2,2), padding ='same')(x)
-x = Conv2D(64,(3,3),activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-x = MaxPooling2D((2,2), padding ='same')(x)
-x = Conv2D(64,(3,3), activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-x = MaxPooling2D((2,2), padding ='same')(x)
-x = Conv2D(128,(3,3), activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-latent_view = MaxPooling2D((2,2), padding ='same')(x)
+    flatten_2 = Flatten()(latent_view)
+    dense_2 = Dense(bottleneck_size, name ='z_log_sigma')(flatten_2)
+    z_log_sigma = BatchNormalization()(dense_2)
 
-# decoding architecture
+    z = Lambda(sampling)([z_mean, z_log_sigma])
+    encoder = Model(inputt, [z_mean, z_log_sigma, z], name = 'encoder')
+    
+    # DECODER
+    latent_input = Input(shape=(bottleneck_size,), name = 'decoder_input')
+    x = Dense(shape[1]*shape[2]*shape[3])(latent_input)
+    x = Reshape((shape[1],shape[2],shape[3]))(x)
+    x = UpSampling2D((2,2))(x)
+    # x = Cropping2D([[0,0],[0,1]])(x)
+    x = Conv2DTranspose(256,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    x = UpSampling2D((2,2))(x)
+    # x = Cropping2D([[0,1],[0,1]])(x)
+    x = Conv2DTranspose(128,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    x = UpSampling2D((2,2))(x)
+    # x = Cropping2D([[0,1],[0,1]])(x)
+    x = Conv2DTranspose(64,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    x = UpSampling2D((2,2))(x)
+    x = Conv2DTranspose(32,(3,3), activation = 'relu', padding = 'same')(x)
+    x = BatchNormalization()(x)
+    output = Conv2DTranspose(3,(3,3), activation = 'tanh', padding ='same')(x)
 
-x = Conv2DTranspose(128,(3,3), activation = 'relu', padding = 'same')(latent_view)
-x = BatchNormalization()(x)
-x = UpSampling2D((2,2))(x)
-# x = Cropping2D([[0,1],[0,1]])(x)
-x = Conv2DTranspose(64,(3,3), activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-x = UpSampling2D((2,2))(x)
-# x = Cropping2D([[0,1],[0,1]])(x)
-x = Conv2DTranspose(64,(3,3), activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-x = UpSampling2D((2,2))(x)
-x = Conv2DTranspose(32,(3,3), activation = 'relu', padding = 'same')(x)
-x = BatchNormalization()(x)
-x = UpSampling2D((2,2))(x)
-output_layer = Conv2DTranspose(3,(3,3), padding ='same')(x)
+    decoder = Model(latent_input, output, name = 'decoder')
+
+    output_2 = decoder(encoder(inputt)[2])
+    vae = Model(inputt, output_2, name ='vae')
+
+    vae_latent = Model(inputt, latent_view, name ='vae_latent')
+    return vae, vae_latent, encoder, decoder, z_mean, z_log_sigma, z
 
 
-model = Model(input_layer, output_layer)
-model.compile(optimizer='adam', loss='mse')
+vae_2, vae_latent, encoder, decoder, z_mean, z_log_sigma,z = build_conv_vae((512,768,3), n_size, sampling, batch_size = b_size)
 
-history = model.fit(train_set, train_set,
+def vae_loss(input_img, output):
+    # Compute error in reconstruction
+    reconstruction_loss = mse(K.flatten(input_img) , K.flatten(output))
+    
+    # Compute the KL Divergence regularization term
+    kl_loss = - 0.5 * K.sum(1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma), axis = -1)
+    
+    # Return the average loss over all images in batch
+    total_loss = (reconstruction_loss + 0.0001 * kl_loss)    
+    return total_loss
+
+vae_2.compile(optimizer='rmsprop', loss= vae_loss)
+vae_latent.compile(optimizer='rmsprop', loss= vae_loss)
+
+history = vae_2.fit(train_set, train_set,
                 epochs=210,
                 batch_size=32,
                 validation_data=(test_set, test_set)).history
-
-
 
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
@@ -165,17 +212,11 @@ plt.legend(loc='upper right')
 plt.title('Model Mean Squared Error Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_mse24.png')
+plt.savefig('variational_ae_losses_mse4.png')
 # plt.savefig('testerror.png')
 
-
-# compile the latent model
-model_latent = Model(input_layer, latent_view)
-model_latent.compile(optimizer='adam', loss='mse')
-
-preds = model_latent.predict(test_set)
-pred = model.predict(test_set)
-
+preds = vae_latent.predict(test_set)
+pred = vae_2.predict(test_set)
 
 fig1 = plt.figure(figsize=(20, 10))
 for i in range(5):
@@ -204,14 +245,14 @@ for i in range(5):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-fig1.savefig('standard_ae_recon_mse24.png')
+fig1.savefig('variational_ae_recon_mse4.png')
 # fig1.savefig('testrecon.png')  
  
  
 fig2 = plt.figure()
 train_loss = tf.keras.losses.mean_squared_error(pred, test_set)
 
-threshold = np.mean(train_loss) + np.std(train_loss) 
+threshold = np.mean(train_loss)
 print("Threshold: ", threshold)
 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -221,8 +262,9 @@ for i in range(len(train_loss)):
 
 plt.axvline(threshold, color='k', linestyle='dashed', linewidth=1)
 min_ylim, max_ylim = plt.ylim()
-plt.text(threshold*1.1, max_ylim*0.9, 'Mean + 1 std: {:.2f}'.format(threshold))
+plt.text(threshold*1.1, max_ylim*0.9, 'Mean : {:.2f}'.format(threshold))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('standard_ae_hist_mse24.png')
+fig2.savefig('variational_ae_hist_mse4.png')
 # fig2.savefig('testhist.png')
+

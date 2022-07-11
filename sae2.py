@@ -165,7 +165,7 @@ plt.legend(loc='upper right')
 plt.title('Model Mean Squared Error Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_mse24.png')
+plt.savefig('standard_ae_losses_mse22.png')
 # plt.savefig('testerror.png')
 
 
@@ -204,14 +204,14 @@ for i in range(5):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-fig1.savefig('standard_ae_recon_mse24.png')
+fig1.savefig('standard_ae_recon_mse22.png')
 # fig1.savefig('testrecon.png')  
  
  
 fig2 = plt.figure()
 train_loss = tf.keras.losses.mean_squared_error(pred, test_set)
 
-threshold = np.mean(train_loss) + np.std(train_loss) 
+threshold = np.mean(train_loss) 
 print("Threshold: ", threshold)
 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -221,8 +221,8 @@ for i in range(len(train_loss)):
 
 plt.axvline(threshold, color='k', linestyle='dashed', linewidth=1)
 min_ylim, max_ylim = plt.ylim()
-plt.text(threshold*1.1, max_ylim*0.9, 'Mean + 1 std: {:.2f}'.format(threshold))
+plt.text(threshold*1.1, max_ylim*0.9, 'Mean: {:.2f}'.format(threshold))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('standard_ae_hist_mse24.png')
+fig2.savefig('standard_ae_hist_mse22.png')
 # fig2.savefig('testhist.png')
