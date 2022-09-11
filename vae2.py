@@ -5,10 +5,10 @@ from tensorflow.keras.utils import to_categorical
 # from keras.utils import np_utils
 from tensorflow.keras.layers import Conv2D, MaxPool2D, UpSampling2D
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.losses import mean_squared_error
+from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras import backend as K
 # from keras import backend as objectives
-from tensorflow.keras.losses import mse, mean_squared_error
+from tensorflow.keras.losses import mse, binary_crossentropy
 import skimage as sk
 from skimage.io import imread
 import matplotlib.pyplot as plt
@@ -216,10 +216,10 @@ history = vae_2.fit(train_set, train_set,
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
 plt.legend(loc='upper right')
-plt.title('Model Mean Squared Error Loss')
+plt.title('Model Binary Cross Entropy Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('variational_losses_mse9.png')
+plt.savefig('variational_losses_bce2.png')
 # plt.savefig('testerror.png')
 
 preds = vae_latent.predict(test_set)
@@ -252,22 +252,19 @@ for i in range(5):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-fig1.savefig('variational_recon_mse9.png')
+fig1.savefig('variational_recon_bce2.png')
 # fig1.savefig('testrecon.png')  
  
-
+ 
 fig2 = plt.figure()
-
-# train_loss = tf.keras.losses.mean_squared_error(pred, test_set)
-
+# train_loss = tf.keras.losses.binary_crossentropy(pred, test_set)
 train_loss = []
 for i in range(len(pred)):
     train_loss.append(tf.keras.losses.mean_squared_error(pred[i], test_set[i]))
 train_loss = tf.convert_to_tensor(train_loss)
 
-
 # threshold = np.mean(train_loss) + np.std(train_loss) + np.std(train_loss)
-threshold = 0.007
+threshold = 0.2
 print("Threshold: ", threshold)
 train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -280,7 +277,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('variational_hist_mse9_2.png')
+fig2.savefig('variational_hist_bce2_2.png')
 # fig2.savefig('testhist.png')
 
 
@@ -313,18 +310,18 @@ display_c_m.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.007', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.2', fontsize=24)
 
-plt.savefig('variational_cm_mse9_2.png')
+plt.savefig('variational_cm_bce2_2.png')
 print(cm)
 print(classification_report(new_labels, pred_labels))
 
 
 fig4 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
 
 # threshold1 = np.mean(train_loss) 
-threshold1 = 0.006
+threshold1 = 0.45
 print("Threshold: ", threshold1)
 #train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -337,7 +334,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold1*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold1))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig4.savefig('variational_hist_mse9_1.png')
+fig4.savefig('variational_hist_bce2_1.png')
 # fig2.savefig('testhist.png')
 
 pred_labels1 = []
@@ -367,17 +364,17 @@ display_c_m1.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.006', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.45', fontsize=24)
 
-plt.savefig('variational_cm_mse9_1.png')
+plt.savefig('variational_cm_bce2_1.png')
 print(cm1)
 print(classification_report(new_labels1, pred_labels1))
 
 fig6 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
 
 # threshold2 = np.mean(train_loss) + np.std(train_loss)
-threshold2 = 0.005
+threshold2 = 0.6
 print("Threshold: ", threshold2)
 #train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -390,7 +387,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold2*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold2))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig6.savefig('variational_hist_mse9_0.png')
+fig6.savefig('variational_hist_bce2_0.png')
 # fig2.savefig('testhist.png')
 
 pred_labels2 = []
@@ -420,9 +417,9 @@ display_c_m2.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.005', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.6', fontsize=24)
 
-plt.savefig('variational_cm_mse9_0.png')
+plt.savefig('variational_cm_bce2_0.png')
 print(cm2)
 print(classification_report(new_labels2, pred_labels2))
 
@@ -431,10 +428,10 @@ print(classification_report(new_labels2, pred_labels2))
 
 
 fig8 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
 
 # threshold2 = np.mean(train_loss) + np.std(train_loss)
-threshold3 = 0.004
+threshold3 = 0.65
 print("Threshold: ", threshold3)
 #train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -447,7 +444,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold3*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold3))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig6.savefig('variational_hist_mse9_3.png')
+fig6.savefig('variational_hist_bce2_3.png')
 # fig2.savefig('testhist.png')
 
 pred_labels3 = []
@@ -477,19 +474,19 @@ display_c_m3.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.004', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.65', fontsize=24)
 
-plt.savefig('variational_cm_mse9_3.png')
+plt.savefig('variational_cm_bce2_3.png')
 print(cm3)
 print(classification_report(new_labels3, pred_labels3))
 
 
 
 fig10 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
 
 # threshold2 = np.mean(train_loss) + np.std(train_loss)
-threshold4 = 0.003
+threshold4 = 0.7
 print("Threshold: ", threshold4)
 #train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -502,7 +499,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold4*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold4))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig6.savefig('variational_hist_mse9_4.png')
+fig6.savefig('variational_hist_bce2_4.png')
 # fig2.savefig('testhist.png')
 
 pred_labels4 = []
@@ -532,9 +529,9 @@ display_c_m4.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.003', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.7', fontsize=24)
 
-plt.savefig('variational_cm_mse9_4.png')
+plt.savefig('variational_cm_bce2_4.png')
 print(cm4)
 print(classification_report(new_labels4, pred_labels4))
 
@@ -542,10 +539,10 @@ print(classification_report(new_labels4, pred_labels4))
 
 
 fig12 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
 
 # threshold2 = np.mean(train_loss) + np.std(train_loss)
-threshold5 = 0.002
+threshold5 = 0.75
 print("Threshold: ", threshold5)
 #train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 # train_loss = [train_loss[0],train_loss[1]]
@@ -558,7 +555,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold5*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold5))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig6.savefig('variational_hist_mse9_5.png')
+fig6.savefig('variational_hist_bce2_5.png')
 # fig2.savefig('testhist.png')
 
 pred_labels5 = []
@@ -588,19 +585,19 @@ display_c_m5.plot(cmap='OrRd', xticks_rotation=25)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 # Giving name to the plot
-plt.title('Confusion Matrix with Threshold = 0.002', fontsize=24)
+plt.title('Confusion Matrix with Threshold = 0.75', fontsize=24)
 
-plt.savefig('variational_cm_mse9_5.png')
+plt.savefig('variational_cm_bce2_5.png')
 print(cm5)
 print(classification_report(new_labels5, pred_labels5))
 
 
 fig14 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
-
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
+#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 threshold6 = np.mean(train_loss) + np.std(train_loss) 
 print("Threshold: ", threshold6)
-#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
+
 # train_loss = train_loss[0]
 # print(len(train_loss))
 # for i in range(len(train_loss)):
@@ -613,7 +610,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold6*1.1, max_ylim*0.9, 'Mean + 1 std: {:.4f}'.format(threshold6))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('variational_hist_mse9_6.png')
+fig2.savefig('variational_hist_bce2_6.png')
 # fig2.savefig('testhist.png')
 
 
@@ -646,17 +643,17 @@ plt.yticks(fontsize=12)
 # Giving name to the plot
 plt.title('Confusion Matrix with Threshold = Mean + 1 std', fontsize=24)
 
-plt.savefig('variational_cm_mse9_6.png')
+plt.savefig('variational_cm_bce2_6.png')
 print(cm6)
 print(classification_report(new_labels6, pred_labels6))
 
 
 fig16 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
-
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
+#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 threshold7 = np.mean(train_loss) 
 print("Threshold: ", threshold7)
-#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
+
 # train_loss = train_loss[0]
 # print(len(train_loss))
 # for i in range(len(train_loss)):
@@ -669,7 +666,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold7*1.1, max_ylim*0.9, 'Mean: {:.4f}'.format(threshold7))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('variational_hist_mse9_7.png')
+fig2.savefig('variational_hist_bce2_7.png')
 # fig2.savefig('testhist.png')
 
 pred_labels7 = []
@@ -701,17 +698,17 @@ plt.yticks(fontsize=12)
 # Giving name to the plot
 plt.title('Confusion Matrix with Threshold = Mean', fontsize=24)
 
-plt.savefig('variational_cm_mse9_7.png')
+plt.savefig('variational_cm_bce2_7.png')
 print(cm7)
 print(classification_report(new_labels7, pred_labels7))
 
 
 fig18 = plt.figure()
-# train_loss = tf.keras.losses.mean_squared_error(pred[0:30], test_set[0:30])
-
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
+#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
 threshold8 = np.mean(train_loss) + np.std(train_loss) + np.std(train_loss) 
 print("Threshold: ", threshold8)
-#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
+
 # train_loss = train_loss[0]
 # print(len(train_loss))
 # for i in range(len(train_loss)):
@@ -724,7 +721,7 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold8*1.1, max_ylim*0.9, 'Mean + 2 std: {:.4f}'.format(threshold8))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('variational_hist_mse9_8.png')
+fig2.savefig('variational_hist_bce2_8.png')
 # fig2.savefig('testhist.png')
 
 
@@ -757,6 +754,64 @@ plt.yticks(fontsize=12)
 # Giving name to the plot
 plt.title('Confusion Matrix with Threshold = Mean + 2 std', fontsize=24)
 
-plt.savefig('variational_cm_mse9_8.png')
+plt.savefig('variational_cm_bce2_8.png')
 print(cm8)
 print(classification_report(new_labels8, pred_labels8))
+
+
+
+
+
+
+fig20 = plt.figure()
+# train_loss = tf.keras.losses.binary_crossentropy(pred[0:30], test_set[0:30])
+
+# threshold2 = np.mean(train_loss) + np.std(train_loss)
+threshold9 = 0.8
+print("Threshold: ", threshold9)
+#train_loss = train_loss.eval(session=tf.compat.v1.Session()) 
+# train_loss = [train_loss[0],train_loss[1]]
+# print(len(train_loss))
+for i in range(len(train_loss[0:1])):
+    plt.hist(train_loss[i], bins=50, alpha=0.5)
+
+plt.axvline(threshold9, color='k', linestyle='dashed', linewidth=1)
+min_ylim, max_ylim = plt.ylim()
+plt.text(threshold9*1.1, max_ylim*0.9, 'Threshold: {:.4f}'.format(threshold9))
+plt.xlabel("Train loss")
+plt.ylabel("No of pixels")
+fig6.savefig('variational_hist_bce2_9.png')
+# fig2.savefig('testhist.png')
+
+pred_labels9 = []
+for i in range(len(train_loss)):
+    if (np.mean(train_loss[i])) > threshold9:
+        pred_labels9.append('Low (Difficult)')
+    else:
+        pred_labels9.append('Good Quality')
+
+new_labels9 = []
+for i in range(len(labelled_test)):
+    new_labels9.append(labelled_test[i][1])
+
+
+fig21 = plt.figure()
+cm9 = confusion_matrix(new_labels9, pred_labels9, labels = labels)
+
+plt.rcParams['figure.figsize'] = (10.0, 9.0)
+plt.rcParams['font.size'] = 20
+
+# Implementing visualization of Confusion Matrix
+display_c_m9 = ConfusionMatrixDisplay(cm9, display_labels=labels)
+# Plotting Confusion Matrix
+# Setting colour map to be used
+display_c_m9.plot(cmap='OrRd', xticks_rotation=25)
+# Setting fontsize for xticks and yticks
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+# Giving name to the plot
+plt.title('Confusion Matrix with Threshold = 0.8', fontsize=24)
+
+plt.savefig('variational_cm_bce2_9.png')
+print(cm9)
+print(classification_report(new_labels9, pred_labels9))

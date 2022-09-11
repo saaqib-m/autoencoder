@@ -15,6 +15,7 @@ import sys
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 import zipfile
 import os
 from pathlib import Path
@@ -55,22 +56,25 @@ for i in list_difference:
     removal_imgs = "/rds/general/user/sim21/home/SWET_data/" + a[0] + "/" + a[1] + "_" + a[2]
     img_path.remove(removal_imgs)
 
-# Splitting data into train and test
+# Splitting data into train and test for NORMAL data 
 train = []
 test = []
+labelled_train = []
+labelled_test = []
 for i, j, evall in zip(range(len(df)), df["ref_id"], df["Eczema-Evaluability"]):
     if evall == "Normal (Fine)" or evall == "High (Great)":
-        train.append(j)
+        labelled_train.append([j,"Good Quality"])
     else:
-        test.append(j)
+        labelled_test.append([j,evall])
 
 # Edit train and test arrays so that they can be read
-for i, j, k, l in zip(train,test, range(len(train)),range(len(test))):
-    a = i.split("_",1)
-    b = j.split("_",1)
-    train[k] = "/rds/general/user/sim21/home/SWET_data/" + a[0] + "/" + a[1]
-    test[l] = "/rds/general/user/sim21/home/SWET_data/" + b[0] + "/" + b[1]
-
+for i, j in zip(labelled_train,labelled_test):
+    # print('i',i)
+    a = i[0].split("_",1)
+    b = j[0].split("_",1)
+    # print(a)
+    train.append("/rds/general/user/sim21/home/SWET_data/" + a[0] + "/" + a[1])
+    test.append("/rds/general/user/sim21/home/SWET_data/" + b[0] + "/" + b[1])
 
 def get_input(path):
     """get specific image from path"""
@@ -150,11 +154,12 @@ output_layer = Conv2DTranspose(3,(3,3), padding ='same')(x)
 
 
 model = Model(input_layer, output_layer)
-model.compile(optimizer='adam', loss='mse')
+optimizer = tf.keras.optimizers.Adam(0.01)
+model.compile(optimizer=optimizer, loss='mse')
 
 history = model.fit(train_set, train_set,
                 epochs=210,
-                batch_size=32,
+                batch_size=64,
                 validation_data=(test_set, test_set)).history
 
 
@@ -162,16 +167,17 @@ history = model.fit(train_set, train_set,
 plt.plot(history['loss'], linewidth=2, label='Train')
 plt.plot(history['val_loss'], linewidth=2, label='Test')
 plt.legend(loc='upper right')
-plt.title('Model Mean Squared Error Loss')
+plt.title('Model Mean Squared Error Loss (lr=0.01)')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.savefig('standard_ae_losses_mse23.png')
+plt.savefig('standard_ae_losses_mse32.png')
 # plt.savefig('testerror.png')
 
 
 # compile the latent model
 model_latent = Model(input_layer, latent_view)
-model_latent.compile(optimizer='adam', loss='mse')
+optimizer = tf.keras.optimizers.Adam(0.01)
+model_latent.compile(optimizer=optimizer, loss='mse')
 
 preds = model_latent.predict(test_set)
 pred = model.predict(test_set)
@@ -204,7 +210,7 @@ for i in range(5):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-fig1.savefig('standard_ae_recon_mse23.png')
+fig1.savefig('standard_ae_recon_mse32.png')
 # fig1.savefig('testrecon.png')  
  
  
@@ -216,7 +222,7 @@ print("Threshold: ", threshold)
 
 # train_loss = [train_loss[0],train_loss[1]]
 # print(len(train_loss))
-for i in range(len(train_loss)):
+for i in range(len(train_loss[0:1])):
     plt.hist(train_loss[i], bins=50, alpha=0.5)
 
 plt.axvline(threshold, color='k', linestyle='dashed', linewidth=1)
@@ -224,5 +230,41 @@ min_ylim, max_ylim = plt.ylim()
 plt.text(threshold*1.1, max_ylim*0.9, 'Mean + 2 std: {:.2f}'.format(threshold))
 plt.xlabel("Train loss")
 plt.ylabel("No of pixels")
-fig2.savefig('standard_ae_hist_mse23.png')
+fig2.savefig('standard_ae_hist_mse32.png')
 # fig2.savefig('testhist.png')
+
+
+labels = ["Good Quality", "Low (Difficult)"]
+
+pred_labels = []
+for i in range(len(train_loss)):
+    if (np.mean(train_loss[i])) > threshold:
+        pred_labels.append('Low (Difficult)')
+    else:
+        pred_labels.append('Good Quality')
+
+new_labels = []
+for i in range(len(labelled_test)):
+    new_labels.append(labelled_test[i][1])
+
+
+fig3 = plt.figure()
+cm = confusion_matrix(new_labels, pred_labels, labels = labels)
+
+plt.rcParams['figure.figsize'] = (10.0, 9.0)
+plt.rcParams['font.size'] = 20
+
+# Implementing visualization of Confusion Matrix
+display_c_m = ConfusionMatrixDisplay(cm, display_labels=labels)
+# Plotting Confusion Matrix
+# Setting colour map to be used
+display_c_m.plot(cmap='OrRd', xticks_rotation=25)
+# Setting fontsize for xticks and yticks
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+# Giving name to the plot
+plt.title('Confusion Matrix with Threshold = Mean + 2 std', fontsize=24)
+
+plt.savefig('standard_ae_cm_mse32.png')
+print(cm)
+print(classification_report(new_labels, pred_labels))
